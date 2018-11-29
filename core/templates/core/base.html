@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+    {% load pwa %}
+<head>
+
+    {% progressive_web_app_meta %}
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Mis Perris</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'core/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/estilos.css' %}">
+    <script src="{% static 'core/js/jQuery.js' %}"></script>
+    <script src="{% static 'core/js/bootstrap.min.js' %}"></script>
+
+     <!--FIREBASE-->
+
+     <script src="https://www.gstatic.com/firebasejs/3.9.0/firebase-app.js"></script>
+     <script src="https://www.gstatic.com/firebasejs/3.9.0/firebase-messaging.js"></script>
+     <script>
+         // Initialize Firebase
+        var config = {
+          apiKey: "AIzaSyC6MDrWM0JIfqxC6u0Vzv6AhWTm1k1dm3o",
+          authDomain: "mis-perris-e3766.firebaseapp.com",
+          databaseURL: "https://mis-perris-e3766.firebaseio.com",
+          projectId: "mis-perris-e3766",
+          storageBucket: "mis-perris-e3766.appspot.com",
+          messagingSenderId: "353805550253"
+        };
+        firebase.initializeApp(config);
+ 
+     /*PASO 1 Crear el objeto de mensajeria que perimitira recibir mensajes*/
+     const messaging = firebase.messaging();
+     /*PASO 2 registrar el service worker con firebase*/
+     navigator.serviceWorker.register('./serviceworker.js')
+     .then(function(register){
+         //enviar el registro del serviceworker a firebase
+         messaging.useServiceWorker(register);
+         //pedimos permisos para enviar notificacion al usuario 
+         messaging.requestPermission()
+         .then(function(){
+             //el permiso fue aceptado por el usuario            
+             return messaging.getToken();
+         })
+ 
+         .then(function(token){
+             //aqui viene el token generado en el metodo then anterior
+             console.log("Token generado: "+token);
+             //en este paso es necesario enviar el token a django para almacenarlo
+             //enviamos el token
+             fetch('api/agregar-token/',{
+                 method:'POST',
+                 body:JSON.stringify({
+                     'token':token
+                     })
+             })
+             .then(function(){
+                 console.log("el token ha sido enviado")
+              })
+         .catch(function(err){
+         console.log("El usuario no ha aceptado: "+err)
+     })
+ })
+ })
+ 
+ //ahora capturamos el evento que se genera cuando fireplase
+ //me envia una notificacion
+ messaging.onMessage(function(payload){
+     console.log(payload)
+     //mostramos la notificacion 
+     
+     var option = {
+         body:payload.notification.body,
+         icon:payload.notification.icon
+     }
+ 
+     //mostramos la notificacion
+     var notification = new Notification(payload.notification.title, option)
+ })
+ 
+ </script>
+ <!--FIREBASE-->
+
+</head>
+
+<body>
+    <header>
+        <div class="container-fuild">
+            <div class="col-xs-12 col-sm-4 col-md-5">
+                <img class="logo" src="{% static 'core/imagenes/logo.png' %}" alt="logo">
+            </div>
+            <div>
+                <div class="col-xs-12 col-sm-2 col-md-1 linea">
+                    <a class="a" href="{% url 'home' %}">Inicio</a>
+                </div>
+                {% if request.user.is_authenticated %}
+                <div class="col-xs-12 col-sm-2 col-md-1 linea">
+                        <a class="a" href="{% url 'listarMascota' %}">Mascotas</a>
+                    </div>
+                
+                <div class="col-xs-12 col-sm-2 col-md-1 linea">
+                    <a class="a" href="{% url 'agregarMascota' %}">Agregar</a>
+                </div>
+                <div class="col-xs-12 col-sm-2 col-md-1 linea">
+                    <a class="a" href="{% url 'logout' %}">Salir</a>
+                </div>
+                
+                <div class="col-xs-12 col-sm-2 col-md-1 linea">
+                    <a href="">{{ request.user.first_name }}</a>
+                </div>
+                {% else %}  
+                <div class="col-xs-12 col-sm-2 col-md-1 linea">                    
+                        <a class="a" href="{% url 'formulario' %}">Registro</a>
+                </div>
+                <div class="col-xs-12 col-sm-2 col-md-1 linea">
+                    <a class="a" href="{% url 'login' %}">Login</a>
+                </div>
+                <div class="col-xs-12 col-sm-2 col-md-2">
+
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </header>
+
+    {% block contenido %} 
+    
+    {% endblock contenido %}   
+
+    <footer>
+        <div class="col-xs-12 col-sm-12 col-md-12 padding">
+            <p class="foot">
+                <strong>Desarrollo Web y Mobile</strong>
+            </p>
+        </div>
+    </footer>
+
+    
+
+</body>
+
+</html>
